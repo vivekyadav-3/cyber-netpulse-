@@ -7,6 +7,10 @@
 
 **NetPulse** is a full-stack, real-time network intelligence and diagnostic platform designed with a modern cyber dark glassmorphism aesthetic. It bridges OS-level networking primitives (ICMP, raw sockets, route tables, DNS resolution) with an ultra-responsive web dashboard.
 
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="NetPulse Network Dashboard" width="100%" />
+</p>
+
 ---
 
 ## ✨ Features & Architecture
