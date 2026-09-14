@@ -29,6 +29,7 @@ export default function TraceroutePage() {
   const [loading, setLoading] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [selectedHopIndex, setSelectedHopIndex] = useState(0);
 
   const handleTrace = async () => {
     if (!host.trim()) return toast.error('Enter a hostname or IP');
@@ -255,6 +256,192 @@ export default function TraceroutePage() {
             ))}
           </div>
 
+          {/* ── Phase 2: Interactive TTL Hop Mechanics Visualizer ── */}
+          {result.hops?.length > 0 && (() => {
+            const currentHop = result.hops[selectedHopIndex] || result.hops[0];
+            const isDest = currentHop.isDestination;
+            const isTimeout = currentHop.timedOut;
+
+            return (
+              <div style={{
+                background: 'rgba(255,255,255,0.025)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(167,139,250,0.25)', borderRadius: 16, padding: '22px',
+                marginBottom: 20, boxShadow: '0 8px 32px rgba(167,139,250,0.08)',
+              }}>
+                {/* Header & Step Selector */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>⚡</span>
+                      <h3 style={{ fontSize: 15, fontWeight: 800, color: '#f1f5f9' }}>
+                        TTL Hop Mechanics Inspector (RFC 792)
+                      </h3>
+                      <span style={{
+                        fontSize: 10, fontWeight: 800, color: '#c084fc',
+                        background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)',
+                        padding: '2px 8px', borderRadius: 6, fontFamily: 'JetBrains Mono',
+                      }}>
+                        TTL = {currentHop.hopNumber}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                      Click any hop to trace how routers decrement the IP header TTL field until expiry
+                    </p>
+                  </div>
+
+                  {/* Hop selector chips */}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', background: 'rgba(0,0,0,0.4)', padding: 4, borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
+                    {result.hops.map((h, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedHopIndex(idx)}
+                        style={{
+                          background: selectedHopIndex === idx ? '#8b5cf6' : 'transparent',
+                          color: selectedHopIndex === idx ? '#ffffff' : '#64748b',
+                          border: 'none', borderRadius: 6, padding: '5px 10px',
+                          fontSize: 11, fontWeight: 700, fontFamily: 'JetBrains Mono', cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        Hop {h.hopNumber}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Visual Step-through Diagram */}
+                <div style={{
+                  background: 'rgba(0,0,0,0.35)', borderRadius: 12, padding: '18px 20px',
+                  border: '1px solid rgba(255,255,255,0.05)', marginBottom: 18,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+                    {/* Node 1: Your PC */}
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{
+                        width: 42, height: 42, borderRadius: 10, margin: '0 auto 6px',
+                        background: 'rgba(99,102,241,0.15)', border: '1px solid #6366f1',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                      }}>
+                        💻
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#e2e8f0' }}>Your PC</div>
+                      <div style={{ fontSize: 10, color: '#818cf8', fontFamily: 'JetBrains Mono' }}>Send TTL={currentHop.hopNumber}</div>
+                    </div>
+
+                    {/* Arrow: Forward Probe */}
+                    <div style={{ flex: 1, minWidth: 100, textAlign: 'center', position: 'relative' }}>
+                      <div style={{ fontSize: 10, color: '#a78bfa', fontFamily: 'JetBrains Mono', fontWeight: 700, marginBottom: 4 }}>
+                        IP Datagram (TTL = {currentHop.hopNumber})
+                      </div>
+                      <div style={{ height: 2, background: 'linear-gradient(90deg, #6366f1, #a78bfa)', position: 'relative' }}>
+                        <div style={{
+                          position: 'absolute', right: 0, top: -4, width: 0, height: 0,
+                          borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderLeft: '7px solid #a78bfa',
+                        }} />
+                      </div>
+                      <div style={{ fontSize: 9, color: '#475569', marginTop: 4 }}>
+                        {currentHop.hopNumber > 1 ? `Traverses ${currentHop.hopNumber - 1} prior router(s)` : 'Direct local link'}
+                      </div>
+                    </div>
+
+                    {/* Node 2: Target Router / Host */}
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{
+                        width: 42, height: 42, borderRadius: 10, margin: '0 auto 6px',
+                        background: isTimeout ? 'rgba(248,113,113,0.15)' : (isDest ? 'rgba(52,211,153,0.15)' : 'rgba(167,139,250,0.15)'),
+                        border: `1px solid ${isTimeout ? '#f87171' : (isDest ? '#34d399' : '#a78bfa')}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                      }}>
+                        {isTimeout ? '⏱️' : (isDest ? '🎯' : '🔀')}
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#e2e8f0' }}>
+                        {isTimeout ? 'Silent Hop' : (isDest ? 'Destination Host' : `Hop #${currentHop.hopNumber} Router`)}
+                      </div>
+                      <div style={{ fontSize: 10, color: isTimeout ? '#f87171' : (isDest ? '#34d399' : '#c084fc'), fontFamily: 'JetBrains Mono' }}>
+                        {currentHop.ipAddress}
+                      </div>
+                    </div>
+
+                    {/* Arrow: Return Response */}
+                    <div style={{ flex: 1, minWidth: 100, textAlign: 'center', position: 'relative' }}>
+                      <div style={{ fontSize: 10, color: isTimeout ? '#f87171' : (isDest ? '#34d399' : '#fbbf24'), fontFamily: 'JetBrains Mono', fontWeight: 700, marginBottom: 4 }}>
+                        {isTimeout ? 'Drop / No Response' : (isDest ? 'ICMP Type 0 (Echo Reply)' : 'ICMP Type 11 (Time Exceeded)')}
+                      </div>
+                      <div style={{ height: 2, background: isTimeout ? 'rgba(248,113,113,0.3)' : (isDest ? 'linear-gradient(90deg, #34d399, #6366f1)' : 'linear-gradient(90deg, #fbbf24, #6366f1)'), position: 'relative' }}>
+                        <div style={{
+                          position: 'absolute', left: 0, top: -4, width: 0, height: 0,
+                          borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderRight: `7px solid ${isTimeout ? '#f87171' : (isDest ? '#34d399' : '#fbbf24')}`,
+                        }} />
+                      </div>
+                      <div style={{ fontSize: 9, color: '#475569', marginTop: 4 }}>
+                        {currentHop.rtt1Ms != null ? `RTT: ${currentHop.rtt1Ms.toFixed(1)} ms` : 'Request timed out'}
+                      </div>
+                    </div>
+
+                    {/* Node 3: NetPulse Telemetry Engine */}
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{
+                        width: 42, height: 42, borderRadius: 10, margin: '0 auto 6px',
+                        background: 'rgba(34,211,238,0.15)', border: '1px solid #22d3ee',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                      }}>
+                        📊
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#e2e8f0' }}>NetPulse Engine</div>
+                      <div style={{ fontSize: 10, color: '#22d3ee', fontFamily: 'JetBrains Mono' }}>Topology Mapped</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mechanics Explanation Box */}
+                <div style={{
+                  background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: 12, padding: '14px 16px', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 14,
+                }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                      Protocol Action at Hop #{currentHop.hopNumber}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0', lineHeight: 1.5 }}>
+                      {currentHop.protocolAction || (isTimeout ? 'Packet dropped or ICMP rate-limited' : 'TTL decremented to 0 — ICMP Type 11 sent')}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 6, lineHeight: 1.5 }}>
+                      {isDest
+                        ? 'The probe reached the destination IP before TTL hit zero. The destination kernel responded with an ICMP Echo Reply (Type 0).'
+                        : (isTimeout
+                          ? 'This router or intermediate firewall was configured not to return ICMP Time Exceeded messages, causing a timeout (*).'
+                          : `The intermediate router at ${currentHop.ipAddress} received the packet with TTL=1, decremented it to 0, discarded it, and sent back an ICMP Type 11 datagram.`
+                        )}
+                    </div>
+                  </div>
+
+                  <div style={{ borderLeft: '1px solid rgba(255,255,255,0.06)', paddingLeft: 14, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>Outbound TTL:</span>
+                      <span style={{ fontFamily: 'JetBrains Mono', color: '#fbbf24', fontWeight: 700 }}>{currentHop.hopNumber}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>ICMP Response Type:</span>
+                      <span style={{ fontFamily: 'JetBrains Mono', color: isDest ? '#34d399' : (isTimeout ? '#f87171' : '#c084fc'), fontWeight: 700 }}>
+                        {isDest ? 'Type 0 (Echo Reply)' : (isTimeout ? 'None (Timeout)' : 'Type 11 (Time Exceeded)')}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>ICMP Response Code:</span>
+                      <span style={{ fontFamily: 'JetBrains Mono', color: '#94a3b8' }}>0 (TTL exceeded in transit)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>Probe Round-Trip 1:</span>
+                      <span style={{ fontFamily: 'JetBrains Mono', color: currentHop.rtt1Ms ? '#22d3ee' : '#64748b', fontWeight: 700 }}>
+                        {currentHop.rtt1Ms ? `${currentHop.rtt1Ms.toFixed(1)} ms` : '*'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Hop Table */}
           <div style={{
             background: 'rgba(255,255,255,0.025)', backdropFilter: 'blur(20px)',
@@ -266,7 +453,7 @@ export default function TraceroutePage() {
                 <h3 style={{ fontSize: 15, fontWeight: 800, color: '#e2e8f0' }}>
                   Hops Path Diagram ({result.hops?.length ?? 0} Hops)
                 </h3>
-                <p style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>Physical routers traversed across autonomous systems</p>
+                <p style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>Click any row to inspect its RFC 792 TTL hop mechanics</p>
               </div>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -282,12 +469,13 @@ export default function TraceroutePage() {
 
             {/* Table Header */}
             <div style={{
-              display: 'grid', gridTemplateColumns: '50px 1.5fr 1fr 1fr 1fr', gap: 12,
+              display: 'grid', gridTemplateColumns: '50px 1.5fr 1.6fr 1fr 1fr 1fr', gap: 12,
               borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 10, marginBottom: 8,
               color: '#475569', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
             }}>
               <span>Hop</span>
               <span>Router / IP Address</span>
+              <span>RFC 792 Protocol Action</span>
               <span style={{ textAlign: 'center' }}>Probe 1</span>
               <span style={{ textAlign: 'center' }}>Probe 2</span>
               <span style={{ textAlign: 'center' }}>Probe 3</span>
@@ -297,25 +485,29 @@ export default function TraceroutePage() {
             {result.hops?.length > 0 ? result.hops.map((hop, i) => (
               <div
                 key={i}
+                onClick={() => setSelectedHopIndex(i)}
                 className="animate-slide-in"
                 style={{
                   animationDelay: `${i * 30}ms`,
-                  display: 'grid', gridTemplateColumns: '50px 1.5fr 1fr 1fr 1fr', gap: 12,
-                  alignItems: 'center', padding: '10px 8px', borderRadius: 8,
-                  background: i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent',
-                  borderBottom: '1px solid rgba(255,255,255,0.03)',
-                  transition: 'background 0.15s',
+                  display: 'grid', gridTemplateColumns: '50px 1.5fr 1.6fr 1fr 1fr 1fr', gap: 12,
+                  alignItems: 'center', padding: '10px 8px', borderRadius: 8, cursor: 'pointer',
+                  background: selectedHopIndex === i
+                    ? 'rgba(167,139,250,0.12)'
+                    : (i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent'),
+                  border: selectedHopIndex === i ? '1px solid rgba(167,139,250,0.3)' : '1px solid transparent',
+                  borderBottom: selectedHopIndex === i ? '1px solid rgba(167,139,250,0.3)' : '1px solid rgba(255,255,255,0.03)',
+                  transition: 'all 0.15s',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.035)'}
-                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent'}
+                onMouseEnter={e => { if (selectedHopIndex !== i) e.currentTarget.style.background = 'rgba(255,255,255,0.035)'; }}
+                onMouseLeave={e => { if (selectedHopIndex !== i) e.currentTarget.style.background = i % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent'; }}
               >
                 {/* Hop Number Bubble */}
                 <div style={{
                   width: 28, height: 28, borderRadius: '50%',
-                  background: hop.timedOut ? 'rgba(248,113,113,0.1)' : 'rgba(167,139,250,0.12)',
-                  border: `1px solid ${hop.timedOut ? '#f87171' : '#a78bfa'}40`,
+                  background: hop.timedOut ? 'rgba(248,113,113,0.1)' : (hop.isDestination ? 'rgba(52,211,153,0.15)' : 'rgba(167,139,250,0.12)'),
+                  border: `1px solid ${hop.timedOut ? '#f87171' : (hop.isDestination ? '#34d399' : '#a78bfa')}40`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 800, color: hop.timedOut ? '#f87171' : '#c084fc',
+                  fontSize: 11, fontWeight: 800, color: hop.timedOut ? '#f87171' : (hop.isDestination ? '#34d399' : '#c084fc'),
                   fontFamily: 'JetBrains Mono',
                 }}>
                   {hop.hopNumber}
@@ -324,9 +516,14 @@ export default function TraceroutePage() {
                 {/* IP Address */}
                 <div style={{
                   fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: 600,
-                  color: hop.timedOut ? '#f87171' : '#e2e8f0',
+                  color: hop.timedOut ? '#f87171' : (hop.isDestination ? '#34d399' : '#e2e8f0'),
                 }}>
                   {hop.timedOut ? '★ Request timed out' : hop.ipAddress}
+                </div>
+
+                {/* Protocol Action Tag */}
+                <div style={{ fontSize: 11, color: hop.isDestination ? '#34d399' : (hop.timedOut ? '#64748b' : '#c084fc') }}>
+                  {hop.isDestination ? 'Destination (Type 0 Echo Reply)' : (hop.timedOut ? 'Timeout (No response)' : 'TTL=0 (Type 11 Time Exceeded)')}
                 </div>
 
                 {/* Probes */}

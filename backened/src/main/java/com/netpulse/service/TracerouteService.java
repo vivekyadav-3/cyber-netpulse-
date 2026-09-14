@@ -50,7 +50,7 @@ public class TracerouteService {
                 while ((line = reader.readLine()) != null) {
                     if (!line.trim().isEmpty()) {
                         rawOutput.add(line);
-                        TracerouteHop hop = parseHopLine(line, isWindows);
+                        TracerouteHop hop = parseHopLine(line, isWindows, finalDestIp);
                         if (hop != null) {
                             hops.add(hop);
                         }
@@ -61,7 +61,7 @@ public class TracerouteService {
 
             long duration = System.currentTimeMillis() - startTime;
             boolean reached = hops.stream()
-                    .anyMatch(h -> finalDestIp.equals(h.getIpAddress()));
+                    .anyMatch(TracerouteHop::isDestination);
 
             return TracerouteResult.builder()
                     .host(host)
@@ -86,14 +86,13 @@ public class TracerouteService {
         }
     }
 
-    private TracerouteHop parseHopLine(String line, boolean isWindows) {
+    private TracerouteHop parseHopLine(String line, boolean isWindows, String destIp) {
         String trimmed = line.trim();
 
         // Windows hop line format example:
         // 1 1 ms 1 ms 1 ms 192.168.1.1
         // 2 * * * Request timed out.
         if (isWindows) {
-            // Check if line starts with a hop number
             Pattern pattern = Pattern.compile("^(\\d+)\\s+([<\\d*ms\\s]+)\\s+([a-zA-Z0-9.:_-]+|Request timed out\\.?)");
             Matcher matcher = pattern.matcher(trimmed);
 
@@ -103,17 +102,30 @@ public class TracerouteService {
                 String endPart = matcher.group(3);
 
                 boolean timedOut = endPart.toLowerCase().contains("timed out") || rttPart.contains("* * *");
-
                 List<Double> rtts = extractRtts(rttPart);
+
+                String hopIp = timedOut ? "*" : endPart;
+                boolean isDest = !timedOut && (destIp != null && !destIp.isEmpty() && destIp.equals(hopIp));
+                Integer icmpType = timedOut ? null : (isDest ? 0 : 11);
+                String action = timedOut
+                        ? "Probe timed out (router silent or ICMP rate-limited)"
+                        : (isDest
+                                ? "Destination reached — Returned ICMP Type 0 Echo Reply"
+                                : "TTL decremented from " + hopNum + " to 0 — Returned ICMP Type 11 Time Exceeded");
 
                 return TracerouteHop.builder()
                         .hopNumber(hopNum)
-                        .ipAddress(timedOut ? "*" : endPart)
+                        .ttl(hopNum)
+                        .ipAddress(hopIp)
                         .hostName(timedOut ? "Request timed out" : endPart)
                         .rtt1Ms(!rtts.isEmpty() ? rtts.get(0) : null)
                         .rtt2Ms(rtts.size() > 1 ? rtts.get(1) : null)
                         .rtt3Ms(rtts.size() > 2 ? rtts.get(2) : null)
                         .timedOut(timedOut)
+                        .icmpType(icmpType)
+                        .icmpCode(0)
+                        .protocolAction(action)
+                        .isDestination(isDest)
                         .build();
             }
         }

@@ -10,6 +10,7 @@ export default function PingPage() {
   const [loading, setLoading] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeProbeIndex, setActiveProbeIndex] = useState(0);
 
   const handlePing = async () => {
     if (!host.trim()) return toast.error('Enter a hostname or IP');
@@ -275,6 +276,182 @@ export default function PingPage() {
               </div>
             ))}
           </div>
+
+          {/* ── Phase 1: ICMP Packet Inspector (RFC 792 / RFC 4443) ── */}
+          {result.icmpProbes?.length > 0 && (() => {
+            const probe = result.icmpProbes[activeProbeIndex] || result.icmpProbes[0];
+            const isV6 = probe.requestType === 128;
+            return (
+              <div style={{
+                background: 'rgba(255,255,255,0.025)', backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(99,102,241,0.25)', borderRadius: 16, padding: '22px',
+                marginBottom: 18, boxShadow: '0 8px 32px rgba(99,102,241,0.08)',
+              }}>
+                {/* Header & Probe Tabs */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>🔬</span>
+                      <h3 style={{ fontSize: 15, fontWeight: 800, color: '#f1f5f9' }}>
+                        ICMP Packet Inspector
+                      </h3>
+                      <span style={{
+                        fontSize: 10, fontWeight: 800, color: '#818cf8',
+                        background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
+                        padding: '2px 8px', borderRadius: 6, fontFamily: 'JetBrains Mono',
+                      }}>
+                        {isV6 ? 'RFC 4443 (ICMPv6)' : 'RFC 792 (ICMPv4)'}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                      Inspect packet headers, type/code codes, sequence numbers, and IP TTL decrementation
+                    </p>
+                  </div>
+
+                  {/* Probe sequence tabs */}
+                  <div style={{ display: 'flex', gap: 6, background: 'rgba(0,0,0,0.4)', padding: 4, borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
+                    {result.icmpProbes.map((p, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setActiveProbeIndex(idx)}
+                        style={{
+                          background: activeProbeIndex === idx ? '#6366f1' : 'transparent',
+                          color: activeProbeIndex === idx ? '#ffffff' : '#64748b',
+                          border: 'none', borderRadius: 6, padding: '5px 12px',
+                          fontSize: 11, fontWeight: 700, fontFamily: 'JetBrains Mono', cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        Probe #{p.sequenceNumber}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Packet Transmission Pipeline Visual */}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8,
+                  background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: '14px 16px', marginBottom: 18,
+                  border: '1px solid rgba(255,255,255,0.04)', alignItems: 'center',
+                }}>
+                  {[
+                    { step: '1. Local NIC', desc: 'OS ICMP Socket', tag: 'Client' },
+                    { step: '2. DNS Query', desc: `${result.ipAddress || 'Resolved'}`, tag: 'Resolved' },
+                    { step: '3. Echo Request', desc: isV6 ? 'Type 128 (ICMPv6)' : 'Type 8 (Echo Req)', tag: 'Outbound' },
+                    { step: '4. Transit IP', desc: 'Intermediate Routers', tag: 'TTL -1 / hop' },
+                    { step: '5. Target Server', desc: `${result.host}`, tag: 'Inbound' },
+                    { step: '6. Echo Reply', desc: isV6 ? 'Type 129 (ICMPv6)' : 'Type 0 (Echo Reply)', tag: `${probe.rttMs ?? 0} ms` },
+                  ].map((node, i) => (
+                    <div key={i} style={{ textAlign: 'center', position: 'relative' }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {node.tag}
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', marginTop: 2 }}>
+                        {node.step}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#475569', fontFamily: 'JetBrains Mono', marginTop: 2 }}>
+                        {node.desc}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Request vs Response Datagram Anatomy */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  {/* ICMP Request Frame */}
+                  <div style={{
+                    background: 'rgba(99,102,241,0.03)', border: '1px solid rgba(99,102,241,0.15)',
+                    borderRadius: 12, padding: '14px 16px',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        ICMP Request Frame
+                      </span>
+                      <span style={{ fontSize: 10, color: '#64748b', fontFamily: 'JetBrains Mono' }}>Client → Target</span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>Destination</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#e2e8f0', fontWeight: 700 }}>{result.host} ({result.ipAddress})</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>ICMP Type</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#38bdf8', fontWeight: 800 }}>
+                          {probe.requestType} {isV6 ? '(ICMPv6 Echo Request)' : '(Echo Request)'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>ICMP Code</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#94a3b8' }}>{probe.requestCode} (No code)</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>Sequence Number</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#fbbf24', fontWeight: 700 }}>{probe.sequenceNumber}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>Payload Buffer</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#34d399' }}>{probe.payloadBytes} Bytes</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#64748b' }}>Header Checksum</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#a78bfa' }}>16-bit 1's Complement (RFC 1071)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ICMP Response Frame */}
+                  <div style={{
+                    background: probe.successful ? 'rgba(52,211,153,0.03)' : 'rgba(248,113,113,0.03)',
+                    border: `1px solid ${probe.successful ? 'rgba(52,211,153,0.2)' : 'rgba(248,113,113,0.2)'}`,
+                    borderRadius: 12, padding: '14px 16px',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: probe.successful ? '#34d399' : '#f87171', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        ICMP Reply Frame
+                      </span>
+                      <span style={{ fontSize: 10, color: '#64748b', fontFamily: 'JetBrains Mono' }}>Target → Client</span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>Responding IP</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#e2e8f0', fontWeight: 700 }}>{probe.responderIp || result.ipAddress}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>ICMP Type</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: probe.successful ? '#34d399' : '#f87171', fontWeight: 800 }}>
+                          {probe.replyType != null ? `${probe.replyType} (${isV6 ? 'ICMPv6 Echo Reply' : 'Echo Reply'})` : 'Timeout (No reply)'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>ICMP Code</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#94a3b8' }}>{probe.replyCode ?? 0}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>IP Header TTL</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#22d3ee', fontWeight: 700 }}>
+                          {probe.ttl ? `${probe.ttl} hops remaining` : 'N/A (IPv6 Hop Limit)'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>Measured RTT</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: probe.rttMs != null ? rttColor(probe.rttMs) : '#64748b', fontWeight: 800 }}>
+                          {probe.rttMs != null ? `${probe.rttMs} ms` : 'Dropped'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#64748b' }}>Packet Verification</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: probe.successful ? '#34d399' : '#f87171', fontWeight: 700 }}>
+                          {probe.successful ? '✓ Packet Received & Validated' : '✗ Probe Timed Out'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* RTT Visual Bar */}
           {result.avgRttMs != null && (

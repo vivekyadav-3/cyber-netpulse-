@@ -21,4 +21,5 @@ public class PingResult {
     private Double maxRttMs;
     private List<String> rawOutput;
     private boolean reachable;
+    private List<IcmpProbe> icmpProbes;
 }

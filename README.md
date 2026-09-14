@@ -21,15 +21,18 @@
 - **Socket Distribution Breakdown**: Interactive donut chart visualizing TCP vs UDP protocol splits and socket states.
 - **Ping Health Gauge**: Radial rating meter indicating live network quality (LAN, Regional, Cross-Continent).
 
-### 📡 2. Ping Monitor
-- **ICMP Latency Measurement**: Precision tracking of Round-Trip Time (RTT) and packet loss percentages.
-- **Quality Meter**: Visual rating bar benchmarks against LAN (<20ms), Edge (<60ms), and WAN thresholds.
-- **Terminal Replay**: Collapsible raw terminal log view with one-click clipboard copy.
+### 📡 2. Ping Monitor & ICMP Packet Inspector (RFC 792 / RFC 4443)
+- **True RFC Packet Anatomy**: Disassembles every probe into exact ICMP header datagram fields:
+  - **Request**: Type `8` (`128` IPv6), Code `0`, Sequence Number, 32-byte Payload, and 16-bit 1's complement Checksum.
+  - **Reply**: Type `0` (`129` IPv6), Code `0`, Sequence Number, decremented IP TTL, and calculated Round-Trip Time (RTT).
+- **Packet Transmission Pipeline**: Interactive lifecycle diagram tracing `Local NIC` $\to$ `DNS` $\to$ `Outbound Request` $\to$ `Transit Router TTL Decrement` $\to$ `Target NIC` $\to$ `Inbound Reply`.
+- **Latency Quality Meter**: Visual rating bar benchmarked against LAN (<20ms), Edge (<60ms), and WAN thresholds.
 
-### 🗺️ 3. Traceroute Visualizer
-- **Hop-by-Hop Topology**: Live discovery of routing paths from the local machine to any target host.
-- **Multi-Probe RTT**: Displays 3 distinct latency probes per hop with color-coded response badges and timeout indicators.
-- **Presets & Guides**: Quick targets (Cloudflare, Google, GitHub, AWS) and TTL mechanics overview.
+### 🗺️ 3. Traceroute Visualizer & TTL Hop Mechanics Inspector
+- **Interactive TTL Simulation**: Step-through visualizer showing how intermediate routers decrement the IP header TTL field (`TTL = 1, 2, ... N`).
+- **RFC 792 Error Generation**: Explains why routers discard datagrams at `TTL=0` and return an **ICMP Type 11 (Time Exceeded)** packet to discover the network topology.
+- **Destination Verification**: Identifies the terminal hop where the target host returns an **ICMP Type 0 (Echo Reply)**.
+- **Multi-Probe Diagnostics**: Measures 3 probe round-trip times per hop with timeout handling for silent routers.
 
 ### 🌐 4. DNS Analyzer
 - **Dual-Stack Resolution**: Automatic breakdown of IPv4 (`A`) and IPv6 (`AAAA`) addresses.
