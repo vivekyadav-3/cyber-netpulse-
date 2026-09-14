@@ -459,6 +459,159 @@ export default function PingPage() {
             );
           })()}
 
+          {/* Packet Encapsulation Viewer (P5) */}
+          <div style={{
+            background: 'rgba(255,255,255,0.025)', backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 22px',
+            marginBottom: 18,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div>
+                <h3 style={{ fontSize: 15, fontWeight: 800, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>📦</span> Packet Encapsulation Hierarchy (OSI & TCP/IP Stack)
+                </h3>
+                <p style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                  Drill down into nested protocol headers traversing the network interface controller (NIC) to wire
+                </p>
+              </div>
+              <span style={{
+                background: 'rgba(99,102,241,0.1)', color: '#818cf8',
+                border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8,
+                fontSize: 10, fontWeight: 800, padding: '4px 10px', fontFamily: 'JetBrains Mono'
+              }}>
+                Layer 2 → Layer 7
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Layer 2: Ethernet Frame */}
+              <div style={{
+                background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)',
+                borderRadius: 10, padding: '12px 14px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, background: '#6366f1', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
+                      L2 Data Link
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>IEEE 802.3 / Ethernet II Frame</span>
+                  </div>
+                  <span style={{ fontSize: 10, color: '#818cf8', fontFamily: 'JetBrains Mono' }}>14-Byte Header + 4-Byte FCS</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, fontSize: 11, fontFamily: 'JetBrains Mono' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>Destination MAC</div>
+                    <div style={{ color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>Gateway / Router</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>Source MAC</div>
+                    <div style={{ color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>Host NIC Interface</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>EtherType</div>
+                    <div style={{ color: '#818cf8', fontWeight: 700, marginTop: 2 }}>{result.ipAddress?.includes(':') ? '0x86DD (IPv6)' : '0x0800 (IPv4)'}</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>CRC-32 / FCS</div>
+                    <div style={{ color: '#34d399', fontWeight: 700, marginTop: 2 }}>Hardware Verified</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Layer 3: Network Header */}
+              <div style={{
+                background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.2)',
+                borderRadius: 10, padding: '12px 14px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, background: '#0284c7', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
+                      L3 Network
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>
+                      {result.ipAddress?.includes(':') ? 'IPv6 Header (RFC 8200 - 40 Bytes Fixed)' : 'IPv4 Header (RFC 791 - 20 Bytes Standard)'}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 10, color: '#38bdf8', fontFamily: 'JetBrains Mono' }}>Protocol 0x01 (ICMP)</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, fontSize: 11, fontFamily: 'JetBrains Mono' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>Source IP</div>
+                    <div style={{ color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>192.168.x.x (Local)</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>Destination IP</div>
+                    <div style={{ color: '#38bdf8', fontWeight: 700, marginTop: 2 }}>{result.ipAddress}</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>TTL / Hop Limit</div>
+                    <div style={{ color: '#fbbf24', fontWeight: 700, marginTop: 2 }}>128 (Windows default)</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>Next Header</div>
+                    <div style={{ color: '#34d399', fontWeight: 700, marginTop: 2 }}>0x01 (ICMP)</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Layer 4: ICMP Header */}
+              <div style={{
+                background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.2)',
+                borderRadius: 10, padding: '12px 14px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, background: '#d97706', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
+                      L4 Control
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>ICMP Datagram (RFC 792 / RFC 4443)</span>
+                  </div>
+                  <span style={{ fontSize: 10, color: '#fbbf24', fontFamily: 'JetBrains Mono' }}>8-Byte Header</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, fontSize: 11, fontFamily: 'JetBrains Mono' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>Type / Code</div>
+                    <div style={{ color: '#f1f5f9', fontWeight: 700, marginTop: 2 }}>Type 8 (Echo) / Code 0</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>16-Bit Checksum</div>
+                    <div style={{ color: '#a78bfa', fontWeight: 700, marginTop: 2 }}>RFC 1071 Verified</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>Identifier</div>
+                    <div style={{ color: '#c084fc', fontWeight: 700, marginTop: 2 }}>PID-keyed (0x...)</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>Sequence Number</div>
+                    <div style={{ color: '#fbbf24', fontWeight: 700, marginTop: 2 }}>1, 2, 3, 4 ...</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Layer 7: Payload Buffer */}
+              <div style={{
+                background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.2)',
+                borderRadius: 10, padding: '12px 14px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, background: '#059669', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
+                      L7 Payload
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>ICMP Data Buffer (32 Bytes Default)</span>
+                  </div>
+                  <span style={{ fontSize: 10, color: '#34d399', fontFamily: 'JetBrains Mono' }}>ASCII Sequence</span>
+                </div>
+                <div style={{
+                  background: 'rgba(0,0,0,0.3)', padding: '8px 10px', borderRadius: 6,
+                  fontFamily: 'JetBrains Mono', fontSize: 11, color: '#94a3b8', letterSpacing: '0.08em'
+                }}>
+                  "abcdefghijklmnopqrstuvwabcdefghi" [32 bytes]
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* RTT Visual Bar */}
           {result.avgRttMs != null && (
             <div style={{

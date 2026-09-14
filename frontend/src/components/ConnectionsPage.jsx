@@ -160,6 +160,116 @@ export default function ConnectionsPage() {
         </div>
       </div>
 
+      {/* TCP Finite State Machine Visualizer (P4) */}
+      <div style={{
+        background: 'rgba(255,255,255,0.025)', backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px',
+        marginBottom: 20,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div>
+            <h3 style={{ fontSize: 15, fontWeight: 800, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>🔄</span> RFC 793 TCP Finite State Machine (FSM)
+            </h3>
+            <p style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+              Click any state node to isolate matching kernel sockets and inspect packet flag handshakes
+            </p>
+          </div>
+          {stateFilter && (
+            <button
+              onClick={() => setStateFilter('')}
+              style={{
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                color: '#94a3b8', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer',
+              }}
+            >
+              Reset Filter
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+          {[
+            {
+              state: 'LISTENING',
+              stage: 'Passive Open',
+              desc: 'Socket bound and waiting for client SYN',
+              flags: 'Waiting for SYN',
+              color: '#6366f1',
+              count: lisCount,
+            },
+            {
+              state: 'SYN_SENT',
+              stage: 'Handshake Step 1',
+              desc: 'Client sent SYN, awaiting SYN+ACK',
+              flags: 'SYN [SEQ=x]',
+              color: '#38bdf8',
+              count: data.filter(c => c.state === 'SYN_SENT').length,
+            },
+            {
+              state: 'ESTABLISHED',
+              stage: 'Active Connection',
+              desc: 'Handshake complete, full-duplex data streaming',
+              flags: 'ACK [SEQ=x+1, ACK=y+1]',
+              color: '#34d399',
+              count: estCount,
+            },
+            {
+              state: 'CLOSE_WAIT',
+              stage: 'Passive Teardown',
+              desc: 'Remote peer sent FIN, local app closing',
+              flags: 'ACK sent, awaiting app close',
+              color: '#f87171',
+              count: data.filter(c => c.state === 'CLOSE_WAIT').length,
+            },
+            {
+              state: 'TIME_WAIT',
+              stage: 'Active Teardown',
+              desc: 'Waiting 2×MSL to ensure final ACK delivery',
+              flags: '2×MSL Timer (120s RFC default)',
+              color: '#fbbf24',
+              count: twCount,
+            },
+          ].map(node => {
+            const isSelected = stateFilter === node.state;
+            return (
+              <div
+                key={node.state}
+                onClick={() => setStateFilter(isSelected ? '' : node.state)}
+                style={{
+                  background: isSelected ? `${node.color}18` : 'rgba(0,0,0,0.25)',
+                  border: `1px solid ${isSelected ? node.color : 'rgba(255,255,255,0.06)'}`,
+                  borderRadius: 12, padding: '12px 14px', cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = node.color; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = isSelected ? node.color : 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = ''; }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 800, color: node.color }}>
+                    {node.state}
+                  </span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 800, background: `${node.color}20`,
+                    color: node.color, padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono'
+                  }}>
+                    {node.count}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: '#f1f5f9', fontWeight: 600 }}>{node.stage}</div>
+                <div style={{ fontSize: 10, color: '#64748b', marginTop: 4, lineHeight: 1.3 }}>{node.desc}</div>
+                <div style={{
+                  fontSize: 9, color: node.color, fontFamily: 'JetBrains Mono', marginTop: 8,
+                  padding: '2px 6px', background: 'rgba(0,0,0,0.3)', borderRadius: 4, display: 'inline-block'
+                }}>
+                  {node.flags}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Filter and Search Bar */}
       <div style={{
         background: 'rgba(255,255,255,0.025)', backdropFilter: 'blur(20px)',

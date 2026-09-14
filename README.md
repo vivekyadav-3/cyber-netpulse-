@@ -23,25 +23,34 @@
 
 ### 📡 2. Ping Monitor & ICMP Packet Inspector (RFC 792 / RFC 4443)
 - **True RFC Packet Anatomy**: Disassembles every probe into exact ICMP header datagram fields:
-  - **Request**: Type `8` (`128` IPv6), Code `0`, Sequence Number, 32-byte Payload, and 16-bit 1's complement Checksum.
+  - **Request**: Type `8` (`128` IPv6), Code `0`, Sequence Number, 32-byte Payload, and PID-keyed Identifier.
+  - **Checksum Verification (RFC 1071)**: Implements true 16-bit One's Complement Checksum computation across the header and payload buffer.
   - **Reply**: Type `0` (`129` IPv6), Code `0`, Sequence Number, decremented IP TTL, and calculated Round-Trip Time (RTT).
+- **Interactive Probe Inspector**: Click between probe tabs (`Probe #1`, `Probe #2`, etc.) to inspect packet headers independently.
 - **Packet Transmission Pipeline**: Interactive lifecycle diagram tracing `Local NIC` $\to$ `DNS` $\to$ `Outbound Request` $\to$ `Transit Router TTL Decrement` $\to$ `Target NIC` $\to$ `Inbound Reply`.
-- **Latency Quality Meter**: Visual rating bar benchmarked against LAN (<20ms), Edge (<60ms), and WAN thresholds.
 
-### 🗺️ 3. Traceroute Visualizer & TTL Hop Mechanics Inspector
+### 📦 3. Packet Encapsulation Hierarchy (OSI & TCP/IP 5-Layer Stack)
+- **Layer 2 (Data Link)**: IEEE 802.3 / Ethernet II Frame inspection (Preamble, Source/Destination MAC, EtherType `0x0800` IPv4 / `0x86DD` IPv6, Hardware CRC-32/FCS).
+- **Layer 3 (Network)**: IPv4 Header (RFC 791, 20 Bytes) / IPv6 Header (RFC 8200, 40 Bytes), Protocol `0x01` (ICMP), TTL/Hop Limit, Source/Destination IPs.
+- **Layer 4 (Transport / Internet Control)**: ICMP Datagram (RFC 792, 8 Bytes) with RFC 1071 verified checksum and session ID.
+- **Layer 7 (Application / Payload)**: 32-byte standard ASCII payload buffer sequence (`abcdefghijklmnopqrstuvw...`).
+
+### 🗺️ 4. Traceroute Visualizer & TTL Hop Mechanics Inspector
 - **Interactive TTL Simulation**: Step-through visualizer showing how intermediate routers decrement the IP header TTL field (`TTL = 1, 2, ... N`).
-- **RFC 792 Error Generation**: Explains why routers discard datagrams at `TTL=0` and return an **ICMP Type 11 (Time Exceeded)** packet to discover the network topology.
+- **RFC 792 Error Generation**: Explains why routers discard datagrams at `TTL = 0` and return an **ICMP Type 11 (Time Exceeded in Transit, Code 0)** packet to discover the network topology.
 - **Destination Verification**: Identifies the terminal hop where the target host returns an **ICMP Type 0 (Echo Reply)**.
-- **Multi-Probe Diagnostics**: Measures 3 probe round-trip times per hop with timeout handling for silent routers.
+- **Multi-Probe Diagnostics**: Measures probe round-trip times per hop with timeout handling for silent routers.
 
-### 🌐 4. DNS Analyzer
-- **Dual-Stack Resolution**: Automatic breakdown of IPv4 (`A`) and IPv6 (`AAAA`) addresses.
-- **CNAME & Timing**: Identifies canonical hostnames and benchmarks query resolution speeds in milliseconds.
-- **One-Click Copy**: Instant clipboard copying for any resolved IP address.
+### 🌐 5. DNS Resolution Hierarchy & Analyzer (RFC 1035)
+- **Interactive Resolution Hierarchy**: Traces the recursive vs. iterative DNS resolution path:
+  `Client Stub Resolver` $\to$ `Local Recursive Resolver (e.g. 8.8.8.8)` $\to$ `Root Nameserver (.)` $\to$ `TLD Nameserver (.com)` $\to$ `Authoritative Nameserver`.
+- **RFC 1035 Header Flags Breakdown**: Visualizes core DNS bitfields including `QR` (Query/Response), `OPCODE` (Standard Query), `AA` (Authoritative Answer), `TC` (Truncation), `RD` (Recursion Desired), `RA` (Recursion Available), and `RCODE` (Return Code).
+- **Dual-Stack Resolution**: Automatic breakdown of IPv4 (`A`) and IPv6 (`AAAA`) addresses with benchmarked resolution latency in milliseconds.
 
-### 🔌 5. Active Connections Inspector
-- **OS Kernel Inspection**: Directly parses live TCP/UDP socket tables via `netstat -ano`.
-- **Interactive Filtering**: Search by IP, Port, State, or PID; instant protocol tabs (`All`, `TCP`, `UDP`); and state filters (`ESTABLISHED`, `LISTENING`, `TIME_WAIT`).
+### 🔄 6. Active Connections & TCP Finite State Machine (RFC 793)
+- **Interactive TCP State Machine**: Visualizes the connection lifecycle (`LISTEN`, `SYN_SENT`, `ESTABLISHED`, `CLOSE_WAIT`, `TIME_WAIT`) with detailed packet control flags (SYN, ACK, FIN, 2×MSL timer).
+- **Interactive Kernel Socket Filtering**: Click any state node to isolate matching sockets directly from the host operating system kernel table (`netstat -ano`).
+- **Live Search & Protocol Tabs**: Instant filtering by IP, Port, State, or PID across active TCP and UDP streams.
 
 ---
 

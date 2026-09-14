@@ -223,6 +223,136 @@ export default function DnsPage() {
             </div>
           </div>
 
+          {/* DNS Resolution Hierarchy Visualizer (P3) */}
+          <div style={{
+            background: 'rgba(255,255,255,0.025)', backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '22px',
+            marginBottom: 20,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>🌳</span> DNS Resolution Hierarchy & Query Mechanics (RFC 1035)
+                </h3>
+                <p style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>
+                  Trace the recursive vs. iterative lookup path through root, TLD, and authoritative nameservers
+                </p>
+              </div>
+              <span style={{
+                background: 'rgba(6,182,212,0.12)', color: '#22d3ee',
+                border: '1px solid rgba(6,182,212,0.3)', borderRadius: 8,
+                fontSize: 10, fontWeight: 800, padding: '4px 10px', fontFamily: 'JetBrains Mono'
+              }}>
+                UDP Port 53 / DoH
+              </span>
+            </div>
+
+            {/* Tree Flow Steps */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
+              {[
+                {
+                  step: '1. Stub Resolver',
+                  role: 'Local NetPulse Host',
+                  query: `Lookup ${host} (Type A/AAAA)`,
+                  server: 'Client OS Kernel',
+                  color: '#818cf8',
+                  bg: 'rgba(99,102,241,0.08)',
+                  border: 'rgba(99,102,241,0.25)',
+                  badge: 'Recursive Query (RD=1)'
+                },
+                {
+                  step: '2. Recursive Resolver',
+                  role: 'ISP / DNS Provider',
+                  query: 'Query Root if cache miss',
+                  server: '8.8.8.8 / 1.1.1.1',
+                  color: '#38bdf8',
+                  bg: 'rgba(56,189,248,0.08)',
+                  border: 'rgba(56,189,248,0.25)',
+                  badge: 'Cache Check'
+                },
+                {
+                  step: '3. Root Nameserver',
+                  role: 'Root Zone (.)',
+                  query: `Referral to .${host.split('.').pop() || 'com'} TLD`,
+                  server: '[a-m].root-servers.net',
+                  color: '#fbbf24',
+                  bg: 'rgba(251,191,36,0.08)',
+                  border: 'rgba(251,191,36,0.25)',
+                  badge: 'NS Delegation'
+                },
+                {
+                  step: '4. TLD Nameserver',
+                  role: `.${host.split('.').pop() || 'com'} TLD Zone`,
+                  query: `Referral to ${host} NS`,
+                  server: 'tld-servers.net',
+                  color: '#c084fc',
+                  bg: 'rgba(192,132,252,0.08)',
+                  border: 'rgba(192,132,252,0.25)',
+                  badge: 'Authoritative Referral'
+                },
+                {
+                  step: '5. Authoritative NS',
+                  role: `${host} Nameserver`,
+                  query: 'Direct Resource Records',
+                  server: `ns1.${host}`,
+                  color: '#34d399',
+                  bg: 'rgba(52,211,153,0.08)',
+                  border: 'rgba(52,211,153,0.25)',
+                  badge: 'Authoritative Answer (AA=1)'
+                },
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    background: item.bg, border: `1px solid ${item.border}`,
+                    borderRadius: 12, padding: '14px', position: 'relative',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: item.color, fontFamily: 'JetBrains Mono' }}>{item.step}</span>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', marginBottom: 4 }}>{item.role}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'JetBrains Mono', marginBottom: 8 }}>{item.server}</div>
+                  <div style={{
+                    fontSize: 9, fontWeight: 700, padding: '3px 6px', borderRadius: 4,
+                    background: 'rgba(0,0,0,0.3)', color: item.color, border: `1px solid ${item.border}`,
+                    display: 'inline-block'
+                  }}>
+                    {item.badge}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* RFC 1035 Packet Header Flags Breakdown */}
+            <div style={{
+              background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: '16px',
+              border: '1px solid rgba(255,255,255,0.05)',
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                RFC 1035 Standard DNS Header Bitfields
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+                {[
+                  { bit: 'QR = 1', desc: 'Response Message', status: 'Response' },
+                  { bit: 'OPCODE = 0', desc: 'Standard Query', status: 'QUERY' },
+                  { bit: 'AA = 0', desc: 'Authoritative Answer', status: 'Cached/Proxy' },
+                  { bit: 'TC = 0', desc: 'Truncation Bit', status: '< 512B UDP' },
+                  { bit: 'RD = 1', desc: 'Recursion Desired', status: 'Recursive' },
+                  { bit: 'RA = 1', desc: 'Recursion Available', status: 'Supported' },
+                  { bit: 'RCODE = 0', desc: 'Response Code', status: 'NOERROR' },
+                ].map((f, i) => (
+                  <div key={i} style={{ background: 'rgba(255,255,255,0.02)', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#22d3ee', fontFamily: 'JetBrains Mono' }}>{f.bit}</div>
+                    <div style={{ fontSize: 9, color: '#64748b', marginTop: 2 }}>{f.desc}</div>
+                    <div style={{ fontSize: 10, color: '#34d399', fontWeight: 700, marginTop: 4, fontFamily: 'JetBrains Mono' }}>{f.status}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Canonical Hostname */}
           {result.canonicalHostName && (
             <div style={{
