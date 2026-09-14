@@ -11,6 +11,7 @@ export default function PingPage() {
   const [showRaw, setShowRaw] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeProbeIndex, setActiveProbeIndex] = useState(0);
+  const [encapProtocol, setEncapProtocol] = useState('ICMP');
 
   const handlePing = async () => {
     if (!host.trim()) return toast.error('Enter a hostname or IP');
@@ -356,6 +357,35 @@ export default function PingPage() {
                   ))}
                 </div>
 
+                {/* Visual Protocol Transit Bridge */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  margin: '14px 0', padding: '10px 18px', background: 'rgba(0,0,0,0.35)',
+                  borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)',
+                  fontSize: 11, fontFamily: 'JetBrains Mono', color: '#94a3b8', flexWrap: 'wrap', gap: 10,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#818cf8', display: 'inline-block' }} />
+                    <span style={{ color: '#818cf8', fontWeight: 800 }}>Echo Request (Type {probe.requestType})</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b' }}>
+                    <span>──▶</span>
+                    <span style={{
+                      background: 'rgba(255,255,255,0.05)', padding: '3px 10px', borderRadius: 6,
+                      color: '#e2e8f0', fontSize: 10, fontWeight: 700,
+                    }}>
+                      INTERNET / ROUTERS (TTL Decremented)
+                    </span>
+                    <span>──▶</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: probe.successful ? '#34d399' : '#f87171', display: 'inline-block' }} />
+                    <span style={{ color: probe.successful ? '#34d399' : '#f87171', fontWeight: 800 }}>
+                      Echo Reply (Type {probe.replyType ?? 0}) · {probe.rttMs != null ? `${probe.rttMs} ms` : 'Dropped'}
+                    </span>
+                  </div>
+                </div>
+
                 {/* Request vs Response Datagram Anatomy */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   {/* ICMP Request Frame */}
@@ -465,7 +495,7 @@ export default function PingPage() {
             border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 22px',
             marginBottom: 18,
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
               <div>
                 <h3 style={{ fontSize: 15, fontWeight: 800, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span>📦</span> Packet Encapsulation Hierarchy (OSI & TCP/IP Stack)
@@ -474,47 +504,117 @@ export default function PingPage() {
                   Drill down into nested protocol headers traversing the network interface controller (NIC) to wire
                 </p>
               </div>
-              <span style={{
-                background: 'rgba(99,102,241,0.1)', color: '#818cf8',
-                border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8,
-                fontSize: 10, fontWeight: 800, padding: '4px 10px', fontFamily: 'JetBrains Mono'
-              }}>
-                Layer 2 → Layer 7
-              </span>
+
+              {/* Protocol Toggle */}
+              <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.4)', borderRadius: 8, padding: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
+                {[
+                  { id: 'ICMP', label: 'ICMP Datagram' },
+                  { id: 'HTTP_TCP', label: 'HTTP / TCP Packet' },
+                ].map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setEncapProtocol(p.id)}
+                    style={{
+                      border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer',
+                      fontSize: 11, fontWeight: 700,
+                      background: encapProtocol === p.id ? '#6366f1' : 'transparent',
+                      color: encapProtocol === p.id ? '#ffffff' : '#64748b',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* Layer 2: Ethernet Frame */}
+              {/* Layer 7 / Application Data */}
               <div style={{
-                background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)',
+                background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.2)',
                 borderRadius: 10, padding: '12px 14px',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, background: '#6366f1', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
-                      L2 Data Link
+                    <span style={{ fontSize: 10, fontWeight: 800, background: '#059669', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
+                      L7 Application
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>IEEE 802.3 / Ethernet II Frame</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>
+                      {encapProtocol === 'ICMP' ? 'ICMP Data Buffer (32 Bytes Default)' : 'HTTP Request Payload (RFC 7230)'}
+                    </span>
                   </div>
-                  <span style={{ fontSize: 10, color: '#818cf8', fontFamily: 'JetBrains Mono' }}>14-Byte Header + 4-Byte FCS</span>
+                  <span style={{ fontSize: 10, color: '#34d399', fontFamily: 'JetBrains Mono' }}>
+                    {encapProtocol === 'ICMP' ? 'Standard Echo Payload' : 'Application Layer Data'}
+                  </span>
+                </div>
+                <div style={{
+                  background: 'rgba(0,0,0,0.3)', padding: '8px 10px', borderRadius: 6,
+                  fontFamily: 'JetBrains Mono', fontSize: 11, color: '#94a3b8', letterSpacing: '0.04em'
+                }}>
+                  {encapProtocol === 'ICMP'
+                    ? '"abcdefghijklmnopqrstuvwabcdefghi" [32 bytes]'
+                    : `GET / HTTP/1.1\\r\\nHost: ${result.host}\\r\\nUser-Agent: NetPulse/2.0\\r\\nAccept: */*\\r\\n\\r\\n`}
+                </div>
+              </div>
+
+              {/* Layer 4 / Transport or Control Header */}
+              <div style={{
+                background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.2)',
+                borderRadius: 10, padding: '12px 14px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, background: '#d97706', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
+                      L4 Transport/Control
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>
+                      {encapProtocol === 'ICMP' ? 'ICMP Header (RFC 792 / RFC 4443)' : 'TCP Segment Header (RFC 793 - 20 Bytes)'}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 10, color: '#fbbf24', fontFamily: 'JetBrains Mono' }}>
+                    {encapProtocol === 'ICMP' ? '8-Byte Header' : 'Full-Duplex Stream'}
+                  </span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, fontSize: 11, fontFamily: 'JetBrains Mono' }}>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
-                    <div style={{ fontSize: 9, color: '#64748b' }}>Destination MAC</div>
-                    <div style={{ color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>Gateway / Router</div>
-                  </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
-                    <div style={{ fontSize: 9, color: '#64748b' }}>Source MAC</div>
-                    <div style={{ color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>Host NIC Interface</div>
-                  </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
-                    <div style={{ fontSize: 9, color: '#64748b' }}>EtherType</div>
-                    <div style={{ color: '#818cf8', fontWeight: 700, marginTop: 2 }}>{result.ipAddress?.includes(':') ? '0x86DD (IPv6)' : '0x0800 (IPv4)'}</div>
-                  </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
-                    <div style={{ fontSize: 9, color: '#64748b' }}>CRC-32 / FCS</div>
-                    <div style={{ color: '#34d399', fontWeight: 700, marginTop: 2 }}>Hardware Verified</div>
-                  </div>
+                  {encapProtocol === 'ICMP' ? (
+                    <>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                        <div style={{ fontSize: 9, color: '#64748b' }}>Type / Code</div>
+                        <div style={{ color: '#f1f5f9', fontWeight: 700, marginTop: 2 }}>Type 8 (Echo) / Code 0</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                        <div style={{ fontSize: 9, color: '#64748b' }}>16-Bit Checksum</div>
+                        <div style={{ color: '#a78bfa', fontWeight: 700, marginTop: 2 }}>RFC 1071 Verified</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                        <div style={{ fontSize: 9, color: '#64748b' }}>Identifier</div>
+                        <div style={{ color: '#c084fc', fontWeight: 700, marginTop: 2 }}>PID-keyed (0x...)</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                        <div style={{ fontSize: 9, color: '#64748b' }}>Sequence Number</div>
+                        <div style={{ color: '#fbbf24', fontWeight: 700, marginTop: 2 }}>1, 2, 3, 4 ...</div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                        <div style={{ fontSize: 9, color: '#64748b' }}>Source Port</div>
+                        <div style={{ color: '#f1f5f9', fontWeight: 700, marginTop: 2 }}>51428 (Ephemeral)</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                        <div style={{ fontSize: 9, color: '#64748b' }}>Destination Port</div>
+                        <div style={{ color: '#38bdf8', fontWeight: 700, marginTop: 2 }}>443 (HTTPS) / 80</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                        <div style={{ fontSize: 9, color: '#64748b' }}>Sequence / ACK</div>
+                        <div style={{ color: '#fbbf24', fontWeight: 700, marginTop: 2 }}>SEQ=1, ACK=1</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
+                        <div style={{ fontSize: 9, color: '#64748b' }}>Control Flags</div>
+                        <div style={{ color: '#34d399', fontWeight: 700, marginTop: 2 }}>[ACK, PSH]</div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -532,7 +632,9 @@ export default function PingPage() {
                       {result.ipAddress?.includes(':') ? 'IPv6 Header (RFC 8200 - 40 Bytes Fixed)' : 'IPv4 Header (RFC 791 - 20 Bytes Standard)'}
                     </span>
                   </div>
-                  <span style={{ fontSize: 10, color: '#38bdf8', fontFamily: 'JetBrains Mono' }}>Protocol 0x01 (ICMP)</span>
+                  <span style={{ fontSize: 10, color: '#38bdf8', fontFamily: 'JetBrains Mono' }}>
+                    {encapProtocol === 'ICMP' ? 'Protocol 0x01 (ICMP)' : 'Protocol 0x06 (TCP)'}
+                  </span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, fontSize: 11, fontFamily: 'JetBrains Mono' }}>
                   <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
@@ -549,64 +651,65 @@ export default function PingPage() {
                   </div>
                   <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
                     <div style={{ fontSize: 9, color: '#64748b' }}>Next Header</div>
-                    <div style={{ color: '#34d399', fontWeight: 700, marginTop: 2 }}>0x01 (ICMP)</div>
+                    <div style={{ color: '#34d399', fontWeight: 700, marginTop: 2 }}>
+                      {encapProtocol === 'ICMP' ? '0x01 (ICMP)' : '0x06 (TCP)'}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Layer 4: ICMP Header */}
+              {/* Layer 2: Ethernet Frame */}
               <div style={{
-                background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.2)',
+                background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)',
                 borderRadius: 10, padding: '12px 14px',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, background: '#d97706', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
-                      L4 Control
+                    <span style={{ fontSize: 10, fontWeight: 800, background: '#6366f1', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
+                      L2 Data Link
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>ICMP Datagram (RFC 792 / RFC 4443)</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>IEEE 802.3 / Ethernet II Frame</span>
                   </div>
-                  <span style={{ fontSize: 10, color: '#fbbf24', fontFamily: 'JetBrains Mono' }}>8-Byte Header</span>
+                  <span style={{ fontSize: 10, color: '#818cf8', fontFamily: 'JetBrains Mono' }}>14-Byte Header + 4-Byte FCS</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, fontSize: 11, fontFamily: 'JetBrains Mono' }}>
                   <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
-                    <div style={{ fontSize: 9, color: '#64748b' }}>Type / Code</div>
-                    <div style={{ color: '#f1f5f9', fontWeight: 700, marginTop: 2 }}>Type 8 (Echo) / Code 0</div>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>Destination MAC</div>
+                    <div style={{ color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>Gateway Router MAC</div>
                   </div>
                   <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
-                    <div style={{ fontSize: 9, color: '#64748b' }}>16-Bit Checksum</div>
-                    <div style={{ color: '#a78bfa', fontWeight: 700, marginTop: 2 }}>RFC 1071 Verified</div>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>Source MAC</div>
+                    <div style={{ color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>Local Host NIC</div>
                   </div>
                   <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
-                    <div style={{ fontSize: 9, color: '#64748b' }}>Identifier</div>
-                    <div style={{ color: '#c084fc', fontWeight: 700, marginTop: 2 }}>PID-keyed (0x...)</div>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>EtherType</div>
+                    <div style={{ color: '#818cf8', fontWeight: 700, marginTop: 2 }}>{result.ipAddress?.includes(':') ? '0x86DD (IPv6)' : '0x0800 (IPv4)'}</div>
                   </div>
                   <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6 }}>
-                    <div style={{ fontSize: 9, color: '#64748b' }}>Sequence Number</div>
-                    <div style={{ color: '#fbbf24', fontWeight: 700, marginTop: 2 }}>1, 2, 3, 4 ...</div>
+                    <div style={{ fontSize: 9, color: '#64748b' }}>CRC-32 / FCS</div>
+                    <div style={{ color: '#34d399', fontWeight: 700, marginTop: 2 }}>Hardware Verified</div>
                   </div>
                 </div>
               </div>
 
-              {/* Layer 7: Payload Buffer */}
+              {/* Layer 1: Physical / Hardware Interface */}
               <div style={{
-                background: 'rgba(52,211,153,0.05)', border: '1px solid rgba(52,211,153,0.2)',
+                background: 'rgba(168,85,247,0.05)', border: '1px solid rgba(168,85,247,0.2)',
                 borderRadius: 10, padding: '12px 14px',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, background: '#059669', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
-                      L7 Payload
+                    <span style={{ fontSize: 10, fontWeight: 800, background: '#9333ea', color: '#fff', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono' }}>
+                      L1 Physical
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>ICMP Data Buffer (32 Bytes Default)</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>Network Interface Controller (NIC) & Physical Transmission</span>
                   </div>
-                  <span style={{ fontSize: 10, color: '#34d399', fontFamily: 'JetBrains Mono' }}>ASCII Sequence</span>
+                  <span style={{ fontSize: 10, color: '#c084fc', fontFamily: 'JetBrains Mono' }}>Hardware Wire Serialization</span>
                 </div>
-                <div style={{
-                  background: 'rgba(0,0,0,0.3)', padding: '8px 10px', borderRadius: 6,
-                  fontFamily: 'JetBrains Mono', fontSize: 11, color: '#94a3b8', letterSpacing: '0.08em'
-                }}>
-                  "abcdefghijklmnopqrstuvwabcdefghi" [32 bytes]
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: 6, fontSize: 11, fontFamily: 'JetBrains Mono' }}>
+                  <span style={{ color: '#94a3b8' }}>Local NIC Transceiver</span>
+                  <span style={{ color: '#c084fc' }}>━━━━▶ [Bitstream: 1000BASE-T / 802.11ax RF Modulation] ━━━━▶</span>
+                  <span style={{ color: '#34d399', fontWeight: 700 }}>Gateway Router Interface</span>
                 </div>
               </div>
             </div>
