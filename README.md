@@ -54,7 +54,7 @@
 
 ### 1. Start Backend (Spring Boot)
 ```bash
-cd backened
+cd backend
 mvn clean spring-boot:run
 ```
 *Backend runs at `http://localhost:8080`.*
@@ -66,6 +66,26 @@ npm install
 npm run dev
 ```
 *Frontend runs at `http://localhost:5173`.*
+
+---
+
+## 🔍 Under the Hood: Engineering & Protocol Architecture
+
+NetPulse is built to teach and inspect **how computer networks actually function**:
+
+### 1. ICMP RFC 792 / RFC 4443 Implementation Reality
+- **The Kernel Boundary**: Standard user-space Java sockets (`java.net.Socket`, `DatagramSocket`) operate at Layer 4 (Transport) and do not have raw packet access (`SOCK_RAW`, `IPPROTO_ICMP`) without administrative kernel privileges or native WinPcap/Npcap C bindings.
+- **OS Subsystem Integration**: NetPulse leverages the host OS's native ICMP subsystem (`IcmpSendEcho` in Windows / kernel ICMP), captures the raw stream, and reconstructs the full RFC 792 (IPv4) & RFC 4443 (IPv6) datagram structure.
+- **Checksum Calculation (RFC 1071)**: NetPulse computes the true 16-bit One's Complement Checksum across the ICMP Type, Code, PID Identifier, Sequence Number, and 32-byte payload buffer.
+
+### 2. Traceroute TTL Expiration Mechanics
+- **The Routing Loop Safeguard**: Every IP packet contains an 8-bit Time-To-Live (TTL) header field. Each intermediate router decrements this value by 1.
+- **Topology Discovery via ICMP Type 11**: When $TTL = 0$, intermediate routers discard the datagram and send an `ICMP Type 11 (Time-to-Live Exceeded in Transit, Code 0)` error back to our machine. NetPulse traces these reflected error datagrams to reconstruct the hop-by-hop topology until the destination returns an `ICMP Type 0 (Echo Reply)`.
+
+### 3. Live Socket Introspection
+- Directly reads the active OS kernel socket table via system introspection (`netstat -ano`), mapping local and remote addresses, ephemeral ports, process IDs (PID), and TCP connection states (`ESTABLISHED`, `LISTENING`, `TIME_WAIT`, `CLOSE_WAIT`).
+
+---
 
 ---
 

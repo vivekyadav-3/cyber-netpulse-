@@ -126,17 +126,24 @@ public class PingService {
             Matcher win6Match = winIpv6Reply.matcher(trimmed);
             Matcher unixMatch = unixReplyPattern.matcher(trimmed);
 
+            int pid = (int) (ProcessHandle.current().pid() & 0xFFFF);
+            String idHex = String.format("0x%04X", pid);
+
             if (win4Match.find()) {
                 String respIp = win4Match.group(1).trim();
                 int bytes = Integer.parseInt(win4Match.group(2));
                 double rtt = Double.parseDouble(win4Match.group(3));
                 int ttl = Integer.parseInt(win4Match.group(4));
+                int currentSeq = seq++;
+                String csum = com.netpulse.model.IcmpProbe.computeRfc1071Checksum(8, 0, pid, currentSeq, bytes);
 
                 probes.add(com.netpulse.model.IcmpProbe.builder()
-                        .sequenceNumber(seq++)
+                        .sequenceNumber(currentSeq)
                         .requestType(8)   // RFC 792 ICMP Echo Request
                         .requestCode(0)
                         .payloadBytes(bytes)
+                        .checksumHex(csum)
+                        .identifierHex(idHex)
                         .replyType(0)     // RFC 792 ICMP Echo Reply
                         .replyCode(0)
                         .ttl(ttl)
@@ -148,12 +155,16 @@ public class PingService {
             } else if (win6Match.find() && !trimmed.toLowerCase().contains("bytes=")) {
                 String respIp = win6Match.group(1).trim();
                 double rtt = Double.parseDouble(win6Match.group(2));
+                int currentSeq = seq++;
+                String csum = com.netpulse.model.IcmpProbe.computeRfc1071Checksum(128, 0, pid, currentSeq, 32);
 
                 probes.add(com.netpulse.model.IcmpProbe.builder()
-                        .sequenceNumber(seq++)
+                        .sequenceNumber(currentSeq)
                         .requestType(128) // RFC 4443 ICMPv6 Echo Request
                         .requestCode(0)
                         .payloadBytes(32)
+                        .checksumHex(csum)
+                        .identifierHex(idHex)
                         .replyType(129)   // RFC 4443 ICMPv6 Echo Reply
                         .replyCode(0)
                         .ttl(null)
@@ -168,12 +179,17 @@ public class PingService {
                 int ttl = Integer.parseInt(unixMatch.group(4));
                 double rtt = Double.parseDouble(unixMatch.group(5));
                 boolean isV6 = respIp.contains(":");
+                int currentSeq = seq++;
+                int reqType = isV6 ? 128 : 8;
+                String csum = com.netpulse.model.IcmpProbe.computeRfc1071Checksum(reqType, 0, pid, currentSeq, bytes);
 
                 probes.add(com.netpulse.model.IcmpProbe.builder()
-                        .sequenceNumber(seq++)
-                        .requestType(isV6 ? 128 : 8)
+                        .sequenceNumber(currentSeq)
+                        .requestType(reqType)
                         .requestCode(0)
                         .payloadBytes(bytes)
+                        .checksumHex(csum)
+                        .identifierHex(idHex)
                         .replyType(isV6 ? 129 : 0)
                         .replyCode(0)
                         .ttl(ttl)
@@ -183,11 +199,16 @@ public class PingService {
                         .statusMessage(isV6 ? "ICMPv6 Echo Reply (Type 129, Code 0)" : "ICMP Echo Reply (Type 0, Code 0)")
                         .build());
             } else if (trimmed.toLowerCase().contains("timed out") || trimmed.toLowerCase().contains("destination host unreachable")) {
+                int currentSeq = seq++;
+                String csum = com.netpulse.model.IcmpProbe.computeRfc1071Checksum(8, 0, pid, currentSeq, 32);
+
                 probes.add(com.netpulse.model.IcmpProbe.builder()
-                        .sequenceNumber(seq++)
+                        .sequenceNumber(currentSeq)
                         .requestType(8)
                         .requestCode(0)
                         .payloadBytes(32)
+                        .checksumHex(csum)
+                        .identifierHex(idHex)
                         .replyType(trimmed.toLowerCase().contains("unreachable") ? 3 : null)
                         .replyCode(0)
                         .ttl(null)

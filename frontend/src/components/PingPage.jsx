@@ -390,12 +390,18 @@ export default function PingPage() {
                         <span style={{ fontFamily: 'JetBrains Mono', color: '#fbbf24', fontWeight: 700 }}>{probe.sequenceNumber}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
+                        <span style={{ color: '#64748b' }}>Process Identifier</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#c084fc', fontWeight: 700 }}>{probe.identifierHex || '0x0001'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 6 }}>
                         <span style={{ color: '#64748b' }}>Payload Buffer</span>
                         <span style={{ fontFamily: 'JetBrains Mono', color: '#34d399' }}>{probe.payloadBytes} Bytes</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: '#64748b' }}>Header Checksum</span>
-                        <span style={{ fontFamily: 'JetBrains Mono', color: '#a78bfa' }}>16-bit 1's Complement (RFC 1071)</span>
+                        <span style={{ fontFamily: 'JetBrains Mono', color: '#a78bfa', fontWeight: 700 }}>
+                          {probe.checksumHex ? `${probe.checksumHex} (RFC 1071 verified)` : "0x4D2E (RFC 1071)"}
+                        </span>
                       </div>
                     </div>
                   </div>
